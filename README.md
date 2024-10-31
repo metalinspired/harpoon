@@ -162,9 +162,9 @@ harpoon:setup({
 
         --- This function gets invoked with the options being passed in from
         --- list:select(index, <...options...>)
-        --- @param list_item {value: any, context: any}
-        --- @param list { ... }
-        --- @param option any
+        ---@param list_item {value: any, context: any}
+        ---@param list { ... }
+        ---@param option any
         select = function(list_item, list, option)
             -- WOAH, IS THIS HTMX LEVEL XSS ATTACK??
             vim.cmd(list_item.value)

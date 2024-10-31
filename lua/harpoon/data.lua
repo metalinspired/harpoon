@@ -48,12 +48,12 @@ function M.info()
     }
 end
 
---- @alias HarpoonRawData {[string]: {[string]: string[]}}
+---@alias HarpoonRawData {[string]: {[string]: string[]}}
 
---- @class HarpoonData
---- @field _data HarpoonRawData
---- @field has_error boolean
---- @field config HarpoonConfig
+---@class HarpoonData
+---@field _data HarpoonRawData
+---@field has_error boolean
+---@field config HarpoonConfig
 local Data = {}
 
 -- 1. load the data

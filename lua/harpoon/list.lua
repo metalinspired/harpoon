@@ -24,8 +24,8 @@ local function determine_length(arr, previous_length)
     return idx
 end
 
---- @class HarpoonNavOptions
---- @field ui_nav_wrap? boolean
+---@class HarpoonNavOptions
+---@field ui_nav_wrap? boolean
 
 ---@param items any[]
 ---@param element any
@@ -65,19 +65,22 @@ local function prepend_to_array(arr, value)
     return idx
 end
 
---- @class HarpoonItem
---- @field value string
---- @field context any
+---@class HarpoonItem
+---@field value string
+---@field context any
 
---- @class HarpoonList
---- @field config HarpoonPartialConfigItem
---- @field name string
---- @field _length number
---- @field _index number
---- @field items HarpoonItem[]
+---@class HarpoonList
+---@field config HarpoonPartialConfigItem
+---@field name string
+---@field _length number
+---@field _index number
+---@field items HarpoonItem[]
 local HarpoonList = {}
 
 HarpoonList.__index = HarpoonList
+---@param config HarpoonPartialConfigItem
+---@param name string
+---@param items HarpoonItem[]
 function HarpoonList:new(config, name, items)
     items = items or {}
     return setmetatable({
@@ -297,7 +300,7 @@ function HarpoonList:select(index, options)
 end
 
 ---
---- @param opts? HarpoonNavOptions
+---@param opts? HarpoonNavOptions
 function HarpoonList:next(opts)
     opts = opts or {}
 
@@ -314,7 +317,7 @@ function HarpoonList:next(opts)
 end
 
 ---
---- @param opts? HarpoonNavOptions
+---@param opts? HarpoonNavOptions
 function HarpoonList:prev(opts)
     opts = opts or {}
 
@@ -330,7 +333,7 @@ function HarpoonList:prev(opts)
     self:select(self._index)
 end
 
---- @return string[]
+---@return string[]
 function HarpoonList:display()
     local out = {}
     for i = 1, self._length do
@@ -341,7 +344,7 @@ function HarpoonList:display()
     return out
 end
 
---- @return string[]
+---@return string[]
 function HarpoonList:encode()
     local out = {}
     for k, v in pairs(self.items) do
@@ -356,10 +359,10 @@ function HarpoonList:encode()
     return out
 end
 
---- @return HarpoonList
---- @param list_config HarpoonPartialConfigItem
---- @param name string
---- @param items string[]
+---@return HarpoonList
+---@param list_config HarpoonPartialConfigItem
+---@param name string
+---@param items string[]
 function HarpoonList.decode(list_config, name, items)
     local list_items = {}
 
