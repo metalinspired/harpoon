@@ -134,11 +134,28 @@ function Data:sync()
         error("Harpoon: unable to sync data, error reading data file")
     end
 
+    local has_data = false
+
     for k, v in pairs(self._data) do
         data[k] = v
+
+        local _, ctx = next(v)
+
+        if next(ctx) then
+            has_data = true
+            break
+        end
     end
 
-    pcall(write_data, data, self.config)
+    if has_data then
+        pcall(write_data, data, self.config)
+    else
+        local path = Path:new(fullpath(self.config))
+
+        if path:exists() then
+            path:rm()
+        end
+    end
 end
 
 M.Data = Data
