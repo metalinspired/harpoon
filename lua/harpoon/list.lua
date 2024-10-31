@@ -344,7 +344,12 @@ end
 --- @return string[]
 function HarpoonList:encode()
     local out = {}
-    for _, v in ipairs(self.items) do
+    for k, v in pairs(self.items) do
+        if k > #out + 1 then
+            for _ = 1, k - #out - 1 do
+                table.insert(out, "")
+            end
+        end
         table.insert(out, self.config.encode(v))
     end
 
@@ -358,8 +363,13 @@ end
 function HarpoonList.decode(list_config, name, items)
     local list_items = {}
 
-    for _, item in ipairs(items) do
-        table.insert(list_items, list_config.decode(item))
+    for i, item in ipairs(items) do
+        if item ~= "" then
+            local ok, data = pcall(list_config.decode, item)
+            if ok then
+                table.insert(list_items, i, data)
+            end
+        end
     end
 
     return HarpoonList:new(list_config, name, list_items)
