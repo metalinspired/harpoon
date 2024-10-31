@@ -71,18 +71,7 @@ local function read_data(config, provided_path)
     provided_path = provided_path or fullpath(config)
     local path = Path:new(provided_path)
     local exists = path:exists()
-
-    if not exists then
-        write_data({}, config)
-    end
-
-    local out_data = path:read()
-
-    if not out_data or out_data == "" then
-        write_data({}, config)
-        out_data = "{}"
-    end
-
+    local out_data = exists and path:read() or "{}"
     local data = vim.json.decode(out_data)
     return data
 end
