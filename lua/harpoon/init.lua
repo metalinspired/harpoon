@@ -152,22 +152,29 @@ function Harpoon.setup(self, partial_config)
     ---TODO: should we go through every seen list and update its config?
 
     if self.hooks_setup == false then
-        vim.api.nvim_create_autocmd({ "BufLeave", "VimLeavePre" }, {
-            group = HarpoonGroup,
-            pattern = "*",
-            callback = function(ev)
-                self:_for_each_list(function(list, config)
-                    local fn = config[ev.event]
-                    if fn ~= nil then
-                        fn(ev, list)
+        vim.api.nvim_create_autocmd(
+            { "BufLeave", "VimLeavePre", "DirChanged" },
+            {
+                group = HarpoonGroup,
+                pattern = "*",
+                callback = function(ev)
+                    if ev.event == "DirChanged" then
+                        self.data = Data.Data:new(self.config)
+                        self.lists = {}
                     end
+                    self:_for_each_list(function(list, config)
+                        local fn = config[ev.event]
+                        if fn ~= nil then
+                            fn(ev, list)
+                        end
 
-                    if ev.event == "VimLeavePre" then
-                        self:sync()
-                    end
-                end)
-            end,
-        })
+                        if ev.event == "VimLeavePre" then
+                            self:sync()
+                        end
+                    end)
+                end,
+            }
+        )
 
         self.hooks_setup = true
     end
