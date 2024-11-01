@@ -41,14 +41,12 @@ function Harpoon:new()
 
     local harpoon = setmetatable({
         config = config,
-        data = Data.Data:new(config),
         logger = Log,
         ui = Ui:new(config.settings),
         _extensions = Extensions.extensions,
         lists = {},
         hooks_setup = false,
     }, self)
-    sync_on_change(harpoon)
 
     return harpoon
 end
@@ -146,8 +144,10 @@ function Harpoon.setup(self, partial_config)
 
     ---@diagnostic disable-next-line: param-type-mismatch
     self.config = Config.merge_config(partial_config, self.config)
+    self.data = Data.Data:new(self.config)
     self.ui:configure(self.config.settings)
     self._extensions:emit(Extensions.event_names.SETUP_CALLED, self.config)
+    sync_on_change(the_harpoon)
 
     ---TODO: should we go through every seen list and update its config?
 
