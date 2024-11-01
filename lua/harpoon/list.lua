@@ -65,9 +65,13 @@ local function prepend_to_array(arr, value)
     return idx
 end
 
+---@class HarpoonItemContext
+---@field row integer
+---@field col integer
+
 ---@class HarpoonItem
 ---@field value string
----@field context any
+---@field context HarpoonItemContext
 
 ---@class HarpoonList
 ---@field config HarpoonPartialConfigItem
@@ -158,6 +162,13 @@ function HarpoonList:add(item)
             Extensions.event_names.ADD,
             { list = self, item = item, idx = idx }
         )
+    else
+        local pos = vim.api.nvim_win_get_cursor(0)
+        local ctx = self.items[index].context
+        ctx.row = pos[1]
+        ctx.col = pos[2]
+
+        self.items[index].context = ctx
     end
 
     return self
