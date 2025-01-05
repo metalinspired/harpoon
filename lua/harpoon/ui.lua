@@ -9,6 +9,7 @@ local Extensions = require("harpoon.extensions")
 ---@field ui_fallback_width? number used if we can't get the current window
 ---@field ui_width_ratio? number this is the ratio of the editor window to use
 ---@field ui_max_width? number this is the max width the window can be
+---@field height_in_lines? number this is the max height in lines that the window can be
 
 ---@return HarpoonToggleOptions
 local function toggle_config(config)
@@ -94,7 +95,7 @@ function HarpoonUI:_create_window(toggle_opts)
         width = toggle_opts.ui_max_width
     end
 
-    local height = 8
+    local height = toggle_opts.height_in_lines or 8 -- 8 lines is default height
     local bufnr = vim.api.nvim_create_buf(false, true)
     local win_id = vim.api.nvim_open_win(bufnr, true, {
         relative = "editor",
