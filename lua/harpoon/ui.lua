@@ -152,12 +152,14 @@ function HarpoonUI:toggle_quick_menu(list, opts)
     self.active_list = list
 
     local contents = self.active_list:display()
+
     vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, contents)
 
     Extensions.extensions:emit(Extensions.event_names.UI_CREATE, {
         win_id = win_id,
         bufnr = bufnr,
         current_file = current_file,
+        contents = contents,
     })
 end
 

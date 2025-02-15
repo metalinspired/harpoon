@@ -14,7 +14,7 @@ local function guess_length(arr)
 end
 
 local function determine_length(arr, previous_length)
-    local idx = previous_length
+    local idx = 0
     for i = previous_length, 1, -1 do
         if arr[i] ~= nil then
             idx = i
@@ -376,7 +376,6 @@ end
 ---@param items string[]
 function HarpoonList.decode(list_config, name, items)
     local list_items = {}
-
     for i, item in ipairs(items) do
         if item ~= "" then
             local ok, data = pcall(list_config.decode, item)
