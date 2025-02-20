@@ -162,7 +162,7 @@ function HarpoonList:add(item)
 
         local data = { list = self, item = item, idx = idx }
         vim.api.nvim_exec_autocmds("User", {
-            pattern = "HarpoonReplace",
+            pattern = "HarpoonAdd",
             data = data,
         })
         Extensions.extensions:emit(Extensions.event_names.ADD, data)
