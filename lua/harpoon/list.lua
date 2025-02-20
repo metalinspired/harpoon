@@ -131,10 +131,12 @@ function HarpoonList:replace_at(idx, item)
         self._length = determine_length(self.items, self._length)
     end
 
-    Extensions.extensions:emit(
-        Extensions.event_names.REPLACE,
-        { list = self, item = item, idx = idx }
-    )
+    local data = { list = self, item = item, idx = idx }
+    vim.api.nvim_exec_autocmds("User", {
+        pattern = "HarpoonReplace",
+        data = data,
+    })
+    Extensions.extensions:emit(Extensions.event_names.REPLACE, data)
 end
 
 ---@param item? HarpoonListItem
@@ -158,10 +160,12 @@ function HarpoonList:add(item)
             self._length = idx
         end
 
-        Extensions.extensions:emit(
-            Extensions.event_names.ADD,
-            { list = self, item = item, idx = idx }
-        )
+        local data = { list = self, item = item, idx = idx }
+        vim.api.nvim_exec_autocmds("User", {
+            pattern = "HarpoonReplace",
+            data = data,
+        })
+        Extensions.extensions:emit(Extensions.event_names.ADD, data)
     else
         local pos = vim.api.nvim_win_get_cursor(0)
         local ctx = self.items[index].context
@@ -185,10 +189,12 @@ function HarpoonList:prepend(item)
             self._length = stop_idx
         end
 
-        Extensions.extensions:emit(
-            Extensions.event_names.ADD,
-            { list = self, item = item, idx = 1 }
-        )
+        local data = { list = self, item = item, idx = 1 }
+        vim.api.nvim_exec_autocmds("User", {
+            pattern = "HarpoonAdd",
+            data = data,
+        })
+        Extensions.extensions:emit(Extensions.event_names.ADD, data)
     end
 
     return self
@@ -205,10 +211,13 @@ function HarpoonList:remove(item)
             if i == self._length then
                 self._length = determine_length(self.items, self._length)
             end
-            Extensions.extensions:emit(
-                Extensions.event_names.REMOVE,
-                { list = self, item = item, idx = i }
-            )
+
+            local data = { list = self, item = item, idx = i }
+            vim.api.nvim_exec_autocmds("User", {
+                pattern = "HarpoonRemove",
+                data = data,
+            })
+            Extensions.extensions:emit(Extensions.event_names.REMOVE, data)
             break
         end
     end
@@ -226,10 +235,13 @@ function HarpoonList:remove_at(index)
         if index == self._length then
             self._length = determine_length(self.items, self._length)
         end
-        Extensions.extensions:emit(
-            Extensions.event_names.REMOVE,
-            { list = self, item = self.items[index], idx = index }
-        )
+
+        local data = { list = self, item = self.items[index], idx = index }
+        vim.api.nvim_exec_autocmds("User", {
+            pattern = "HarpoonRemove",
+            data = data,
+        })
+        Extensions.extensions:emit(Extensions.event_names.REMOVE, data)
     end
     return self
 end
@@ -295,6 +307,9 @@ function HarpoonList:resolve_displayed(displayed, length)
     self.items = new_list
     self._length = length
     if change > 0 then
+        vim.api.nvim_exec_autocmds("User", {
+            pattern = "HarpoonListChange",
+        })
         Extensions.extensions:emit(Extensions.event_names.LIST_CHANGE)
     end
 end
@@ -302,10 +317,12 @@ end
 function HarpoonList:select(index, options)
     local item = self.items[index]
     if item or self.config.select_with_nil then
-        Extensions.extensions:emit(
-            Extensions.event_names.SELECT,
-            { list = self, item = item, idx = index }
-        )
+        local data = { list = self, item = item, idx = index }
+        vim.api.nvim_exec_autocmds("User", {
+            pattern = "HarpoonSelect",
+            data = data,
+        })
+        Extensions.extensions:emit(Extensions.event_names.SELECT, data)
         self.config.select(item, self, options)
     end
 end
