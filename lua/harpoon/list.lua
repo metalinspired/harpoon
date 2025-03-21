@@ -1,408 +1,368 @@
-local Logger = require("harpoon.logger")
-local utils = require("harpoon.utils")
-local Extensions = require("harpoon.extensions")
+local Events = require("harpoon.events")
 
-local function guess_length(arr)
-    local last_known = #arr
-    for i = 1, 20 do
-        if arr[i] ~= nil and last_known < i then
-            last_known = i
-        end
+---@param list table
+---@return integer
+local function real_length(list)
+  local length = 0
+  for key, _ in pairs(list) do
+    if key > length then
+      length = key
     end
-
-    return last_known
+  end
+  return length
 end
 
-local function determine_length(arr, previous_length)
-    local idx = 0
-    for i = previous_length, 1, -1 do
-        if arr[i] ~= nil then
-            idx = i
-            break
-        end
-    end
-    return idx
-end
+---@class HarpoonListSelectOptions
+---@field split boolean
+---@field vsplit boolean
+---@field tabedit boolean
 
----@class HarpoonNavOptions
----@field ui_nav_wrap? boolean
-
----@param items any[]
----@param element any
----@param config HarpoonPartialConfigItem?
-local function index_of(items, length, element, config)
-    local equals = config and config.equals
-        or function(a, b)
-            return a == b
-        end
-    local index = -1
-    for i = 1, length do
-        local item = items[i]
-        if equals(element, item) then
-            index = i
-            break
-        end
-    end
-
-    return index
-end
-
----@param arr any[]
----@param value any
----@return number
-local function prepend_to_array(arr, value)
-    local idx = 1
-    local prev = value
-    while true do
-        local curr = arr[idx]
-        arr[idx] = prev
-        if curr == nil then
-            break
-        end
-        prev = curr
-        idx = idx + 1
-    end
-    return idx
-end
-
----@class HarpoonItemContext
+---@class HarpoonCursorPosition
 ---@field row integer
 ---@field col integer
 
----@class HarpoonItem
+---@class HarpoonListItem
 ---@field value string
----@field context HarpoonItemContext
+---@field context HarpoonCursorPosition
 
 ---@class HarpoonList
----@field config HarpoonPartialConfigItem
----@field name string
----@field _length number
----@field _index number
----@field items HarpoonItem[]
-local HarpoonList = {}
+---@field config HarpoonConfig
+---@field items HarpoonListItem[]
+---@field protected length integer
+---@field protected index integer
+local M = {}
+M.__index = M
 
-HarpoonList.__index = HarpoonList
----@param config HarpoonPartialConfigItem
+---@param config HarpoonConfig
 ---@param name string
----@param items HarpoonItem[]
-function HarpoonList:new(config, name, items)
-    items = items or {}
-    return setmetatable({
-        items = items,
-        config = config,
-        name = name,
-        _length = guess_length(items),
-        _index = 1,
-    }, self)
-end
-
----@return number
-function HarpoonList:length()
-    return self._length
-end
-
-function HarpoonList:clear()
-    self.items = {}
-    self._length = 0
-end
-
----@param item? HarpoonListItem
+---@param items? HarpoonListItem[]
 ---@return HarpoonList
-function HarpoonList:append(item)
-    print("APPEND IS DEPRECATED -- PLEASE USE `add`")
-    return self:add(item)
+function M.new(config, name, items)
+  items = items or {}
+
+  return setmetatable({
+    config = config,
+    name = name,
+    items = items,
+    length = real_length(items),
+    index = 1,
+  }, M)
 end
 
----@param idx number
+function M:clear()
+  self.items = {}
+  self.index = 1
+  self.length = 0
+end
+
+---Returns the index of the item if it exists in the list, nil otherwise.
+---@param item HarpoonListItem
+---@return integer|nil
+function M:index_of(item)
+  for i, value in pairs(self.items) do
+    if value ~= nil and self.config.equals(item, value) then
+      return i
+    end
+  end
+
+  return nil
+end
+
+---@return integer
+function M:length()
+  return self.length
+end
+
 ---@param item? HarpoonListItem
-function HarpoonList:replace_at(idx, item)
-    item = item or self.config.create_list_item(self.config)
-    local current_idx = index_of(self.items, self._length, item, self.config)
+function M:add(item)
+  item = item or self.config.create_list_item()
 
-    self.items[idx] = item
+  local index = self:index_of(item)
 
-    if current_idx ~= idx then
-        self.items[current_idx] = nil
+  --If item exists in list, update the position
+  if index ~= nil then
+    item = self.items[index]
+
+    local pos = vim.api.nvim_win_get_cursor(0)
+    local ctx = item.context
+
+    ctx.row = pos[1]
+    ctx.col = pos[2]
+
+    return
+  end
+
+  if self.config.reindex_on_remove then
+    --If list is reindexed when items are removed, add the item to the end
+    table.insert(self.items, item)
+    self.length = #self.items
+    index = #self.items
+  else
+    --Find first empty index and add item there
+    for i = 1, self.length do
+      if self.items[i] == nil then
+        self.items[i] = item
+        index = i
+        break
+      end
     end
 
-    if idx > self._length then
-        self._length = idx
+    --If no empty index was found, append item to the list
+    if index == nil then
+      table.insert(self.items, item)
+      self.length = #self.items
+      index = #self.items
+    end
+  end
+
+  vim.api.nvim_exec_autocmds("User", {
+    pattern = Events.add,
+    data = {
+      list = self,
+      item = item,
+      index = index,
+    },
+  })
+end
+
+---@param item? HarpoonListItem
+function M:prepend(item)
+  item = item or self.config.create_list_item()
+
+  local index = self:index_of(item)
+
+  if index ~= nil then
+    if self.config.reindex_on_remove then
+      table.remove(self.items, index)
     else
-        self._length = determine_length(self.items, self._length)
+      self.items[index] = nil
     end
+  end
 
-    local data = { list = self, item = item, idx = idx }
-    vim.api.nvim_exec_autocmds("User", {
-        pattern = "HarpoonReplace",
-        data = data,
-    })
-    Extensions.extensions:emit(Extensions.event_names.REPLACE, data)
+  table.insert(self.items, 1, item)
+  --- TODO: option for moving existing keys when not reindexing on remove
+
+  self.length = real_length(self.items)
+
+  vim.api.nvim_exec_autocmds("User", {
+    pattern = Events.add,
+    data = {
+      list = self,
+      item = item,
+      index = 1,
+      old_index = index,
+    },
+  })
 end
 
 ---@param item? HarpoonListItem
-function HarpoonList:add(item)
-    item = item or self.config.create_list_item(self.config)
+function M:remove(item)
+  item = item or self.config.create_list_item()
 
-    local index = index_of(self.items, self._length, item, self.config)
-    Logger:log("HarpoonList:add", { item = item, index = index })
+  local index = self:index_of(item)
 
-    if index == -1 then
-        local idx = self._length + 1
-        for i = 1, self._length + 1 do
-            if self.items[i] == nil then
-                idx = i
-                break
-            end
-        end
+  if index == nil then
+    return
+  end
 
-        self.items[idx] = item
-        if idx > self._length then
-            self._length = idx
-        end
+  if self.config.reindex_on_remove then
+    table.remove(self.items, index)
+  else
+    self.items[index] = nil
+  end
 
-        local data = { list = self, item = item, idx = idx }
-        vim.api.nvim_exec_autocmds("User", {
-            pattern = "HarpoonAdd",
-            data = data,
-        })
-        Extensions.extensions:emit(Extensions.event_names.ADD, data)
+  self.length = real_length(self.items)
+
+  vim.api.nvim_exec_autocmds("User", {
+    pattern = Events.remove,
+    data = {
+      list = self,
+      item = item,
+      index = index,
+    },
+  })
+end
+
+---@param index integer
+function M:remove_at(index)
+  local item = self.items[index]
+
+  if item ~= nil then
+    if self.config.reindex_on_remove then
+      table.remove(self.items, index)
     else
-        local pos = vim.api.nvim_win_get_cursor(0)
-        local ctx = self.items[index].context
-        ctx.row = pos[1]
-        ctx.col = pos[2]
-
-        self.items[index].context = ctx
+      self.items[index] = nil
     end
+  end
 
-    return self
+  vim.api.nvim_exec_autocmds("User", {
+    pattern = Events.remove,
+    data = {
+      list = self,
+      item = item,
+      index = index,
+    },
+  })
 end
 
----@return HarpoonList
-function HarpoonList:prepend(item)
-    item = item or self.config.create_list_item(self.config)
-    local index = index_of(self.items, self._length, item, self.config)
-    Logger:log("HarpoonList:prepend", { item = item, index = index })
-    if index == -1 then
-        local stop_idx = prepend_to_array(self.items, item)
-        if stop_idx > self._length then
-            self._length = stop_idx
-        end
+---@param index integer
+---@param item? HarpoonListItem
+function M:set(index, item)
+  item = item or self.config.create_list_item()
 
-        local data = { list = self, item = item, idx = 1 }
-        vim.api.nvim_exec_autocmds("User", {
-            pattern = "HarpoonAdd",
-            data = data,
-        })
-        Extensions.extensions:emit(Extensions.event_names.ADD, data)
+  local current_index = self:index_of(item)
+
+  -- TODO: decide on what to do when reindex_on_remove and index is lather than list length
+
+  self.items[index] = item
+
+  if current_index ~= nil and current_index ~= index then
+    if self.config.reindex_on_remove then
+      table.remove(self.items, current_index)
+    else
+      self.items[current_index] = nil
     end
+  end
 
-    return self
+  if self.config.reindex_on_remove then
+    self.length = #self.items
+  elseif index > self.length then
+    self.length = index
+  end
+
+  vim.api.nvim_exec_autocmds("User", {
+    pattern = Events.set,
+    data = {
+      list = self,
+      item = item,
+      index = index,
+      old_index = current_index,
+    },
+  })
 end
 
----@return HarpoonList
-function HarpoonList:remove(item)
-    item = item or self.config.create_list_item(self.config)
-    for i = 1, self._length do
-        local v = self.items[i]
-        if self.config.equals(v, item) then
-            Logger:log("HarpoonList:remove", { item = item, index = i })
-            self.items[i] = nil
-            if i == self._length then
-                self._length = determine_length(self.items, self._length)
-            end
-
-            local data = { list = self, item = item, idx = i }
-            vim.api.nvim_exec_autocmds("User", {
-                pattern = "HarpoonRemove",
-                data = data,
-            })
-            Extensions.extensions:emit(Extensions.event_names.REMOVE, data)
-            break
-        end
-    end
-    return self
+---@param index integer
+---@return HarpoonListItem|nil
+function M:get(index)
+  return self.items[index]
 end
 
----@return HarpoonList
-function HarpoonList:remove_at(index)
-    if self.items[index] then
-        Logger:log(
-            "HarpoonList:removeAt",
-            { item = self.items[index], index = index }
-        )
-        self.items[index] = nil
-        if index == self._length then
-            self._length = determine_length(self.items, self._length)
-        end
-
-        local data = { list = self, item = self.items[index], idx = index }
-        vim.api.nvim_exec_autocmds("User", {
-            pattern = "HarpoonRemove",
-            data = data,
-        })
-        Extensions.extensions:emit(Extensions.event_names.REMOVE, data)
+---@param value string
+---@return HarpoonListItem, integer
+---@return nil
+function M:get_by_value(value)
+  for key, item in pairs(self.items) do
+    if item.value == value then
+      return item, key
     end
-    return self
+  end
+
+  return nil
 end
 
-function HarpoonList:get(index)
-    return self.items[index]
+---@param index integer
+---@param options? HarpoonListSelectOptions
+function M:select(index, options)
+  local item = self.items[index]
+
+  vim.api.nvim_exec_autocmds("User", {
+    pattern = Events.select,
+    data = {
+      list = self,
+      item = item,
+      index = index,
+    },
+  })
+
+  if item == nil then
+    return
+  end
+
+  self.index = index
+
+  vim.schedule(function()
+    self.config.select(item, options)
+  end)
 end
 
-function HarpoonList:get_by_value(value)
-    local index = index_of(self.items, self._length, value, {
-        equals = function(element, item)
-            if item == nil then
-                return false
-            end
-            return element == item.value
-        end,
-    })
-    if index == -1 then
-        return nil
+function M:next()
+  if self.length == 0 then
+    return
+  end
+
+  local index
+
+  if self.index >= self.length then
+    if self.config.nav_wrap then
+      index = 1
+    else
+      return
     end
-    return self.items[index], index
+  end
+
+  if index == nil then
+    index = self.index + 1
+  end
+
+  for i = index, self.length do
+    local item = self.items[i]
+
+    if item ~= nil then
+      self:select(i)
+      break
+    end
+  end
 end
 
---- much inefficiencies.  dun care
----@param displayed string[]
----@param length number
-function HarpoonList:resolve_displayed(displayed, length)
-    local new_list = {}
+function M:previous()
+  if self.length == 0 then
+    return
+  end
 
-    local list_displayed = self:display()
+  for i = self.index - 1, 1, -1 do
+    local item = self.items[i]
 
-    local change = 0
-    for i = 1, self._length do
-        local v = self.items[i]
-        local index = index_of(displayed, self._length, v)
-        if index == -1 then
-            change = change + 1
-        end
+    if item ~= nil then
+      self:select(i)
+      return
     end
+  end
 
-    for i = 1, length do
-        local v = displayed[i]
-        local index = index_of(list_displayed, self._length, v)
-        if utils.is_white_space(v) then
-            new_list[i] = nil
-        elseif index == -1 then
-            new_list[i] = self.config.create_list_item(self.config, v)
-            change = change + 1
-        else
-            local index_in_new_list =
-                index_of(new_list, length, self.items[index], self.config)
+  if not self.config.nav_wrap then
+    return
+  end
 
-            if index_in_new_list == -1 then
-                new_list[i] = self.items[index]
-            end
+  for i = self.length, self.index + 1, -1 do
+    local item = self.items[i]
 
-            if index ~= i then
-                change = change + 1
-            end
-        end
+    if item ~= nil then
+      self:select(i)
+      return
     end
-
-    self.items = new_list
-    self._length = length
-    if change > 0 then
-        vim.api.nvim_exec_autocmds("User", {
-            pattern = "HarpoonListChange",
-        })
-        Extensions.extensions:emit(Extensions.event_names.LIST_CHANGE)
-    end
-end
-
-function HarpoonList:select(index, options)
-    local item = self.items[index]
-    if item or self.config.select_with_nil then
-        local data = { list = self, item = item, idx = index }
-        vim.api.nvim_exec_autocmds("User", {
-            pattern = "HarpoonSelect",
-            data = data,
-        })
-        Extensions.extensions:emit(Extensions.event_names.SELECT, data)
-        self.config.select(item, self, options)
-    end
-end
-
----
----@param opts? HarpoonNavOptions
-function HarpoonList:next(opts)
-    opts = opts or {}
-
-    self._index = self._index + 1
-    if self._index > self._length then
-        if opts.ui_nav_wrap then
-            self._index = 1
-        else
-            self._index = self._length
-        end
-    end
-
-    self:select(self._index)
-end
-
----
----@param opts? HarpoonNavOptions
-function HarpoonList:prev(opts)
-    opts = opts or {}
-
-    self._index = self._index - 1
-    if self._index < 1 then
-        if opts.ui_nav_wrap then
-            self._index = #self.items
-        else
-            self._index = 1
-        end
-    end
-
-    self:select(self._index)
+  end
 end
 
 ---@return string[]
-function HarpoonList:display()
-    local out = {}
-    for i = 1, self._length do
-        local v = self.items[i]
-        out[i] = v == nil and "" or self.config.display(v)
-    end
+function M:encode()
+  local out = {}
+  for k, v in pairs(self.items) do
+    out[k] = self.config.encode(v)
+  end
 
-    return out
-end
-
----@return string[]
-function HarpoonList:encode()
-    local out = {}
-    for k, v in pairs(self.items) do
-        if k > #out + 1 then
-            for _ = 1, k - #out - 1 do
-                table.insert(out, "")
-            end
-        end
-        table.insert(out, self.config.encode(v))
-    end
-
-    return out
+  return out
 end
 
 ---@return HarpoonList
----@param list_config HarpoonPartialConfigItem
+---@param config HarpoonConfig
 ---@param name string
----@param items string[]
-function HarpoonList.decode(list_config, name, items)
-    local list_items = {}
-    for i, item in ipairs(items) do
-        if item ~= "" then
-            local ok, data = pcall(list_config.decode, item)
-            if ok then
-                table.insert(list_items, i, data)
-            end
-        end
-    end
+---@param data string[]
+function M.decode(config, name, data)
+  local list_items = {}
+  for k, item in pairs(data) do
+    list_items[k] = item ~= vim.NIL and config.decode(item) or nil
+  end
 
-    return HarpoonList:new(list_config, name, list_items)
+  return M.new(config, name, list_items)
 end
 
-return HarpoonList
+return M

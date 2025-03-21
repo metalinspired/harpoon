@@ -1,7 +1,8 @@
 <div align="center">
 
 # Harpoon
-##### Getting you where you want with the fewest keystrokes.
+
+## Getting you where you want with the fewest keystrokes
 
 [![Lua](https://img.shields.io/badge/Lua-blue.svg?style=for-the-badge&logo=lua)](http://www.lua.org)
 [![Neovim](https://img.shields.io/badge/Neovim%200.8+-green.svg?style=for-the-badge&logo=neovim)](https://neovim.io)
@@ -9,42 +10,51 @@
 <img alt="Harpoon Man" height="280" src="/assets/harpoon-icon.png" />
 </div>
 
-## ⇁ TOC
-* [The Problems](#-The-Problems)
-* [The Solutions](#-The-Solutions)
-* [Installation](#-Installation)
-* [Getting Started](#-Getting-Started)
-* [API](#-API)
-    * [Config](#config)
-    * [Settings](#settings)
-* [Contribution](#-Contribution)
-* [Social](#-Social)
-* [Note to legacy Harpoon 1 users](#-Note-to-legacy-Harpoon-1-users)
+## TOC
 
-## ⇁ The Problems
-1. You're working on a codebase. medium, large, tiny, whatever. You find
+* [The Problems](#the-problems)
+* [The Solutions](#the-solutions)
+* [Installation](#installation)
+* [Getting Started](#getting-started)
+* [API](#api)
+  * [Config](#config)
+  * [Settings](#settings)
+* [Contribution](#contribution)
+* [Social](#social)
+* [Note to legacy Harpoon 1 users](#note-to-legacy-harpoon-1-users)
+
+## The Problems
+
+1. You're working on a codebase. Medium, large, tiny, whatever. You find
 yourself frequenting a small set of files and you are tired of using a fuzzy finder,
-`:bnext` & `:bprev` are getting too repetitive, alternate file doesn't quite cut it, etc etc.
+`:bnext` & `:bprev` are getting too repetitive, alternate file doesn't quite
+cut it, etc etc.
 1. You want to execute some project specific commands, have any number of
 persistent terminals that can be easily navigated to, send commands to other
 tmux windows, or dream up your own custom action and execute with a single key
 
-## ⇁ The Solutions
+## The Solutions
+
 1. Specify either by altering a ui or by adding via hot key files
 1. Unlimited lists and items within the lists
 
-## ⇁ Installation
+## Installation
+
 * neovim 0.8.0+ required
-* install using your favorite plugin manager (i am using `packer` in this case)
+
+### install using [packer.nvim](https://github.com/wbthomason/packer.nvim)
+
 ```lua
-use "nvim-lua/plenary.nvim" -- don't forget to add this one if you don't have it yet!
+use "nvim-lua/plenary.nvim"
 use {
     "ThePrimeagen/harpoon",
     branch = "harpoon2",
     requires = { {"nvim-lua/plenary.nvim"} }
 }
 ```
-* install using [lazy.nvim](https://github.com/folke/lazy.nvim)
+
+### install using [lazy.nvim](https://github.com/folke/lazy.nvim)
+
 ```lua
 {
     "ThePrimeagen/harpoon",
@@ -53,48 +63,44 @@ use {
 }
 ```
 
-## ⇁ Getting Started
+## Getting Started
 
-### Quick Note
-You will want to add your style of remaps and such to your neovim dotfiles with
-the shortcuts you like.  My shortcuts are for me.  Me alone.  Which also means
-they are designed with dvorak in mind (My layout btw, I use dvorak btw).
+### harpoon.setup() is required
 
-### harpoon:setup() IS REQUIRED
-it is a requirement to call `harpoon:setup()`.  This is required due to
+It is a requirement to call `harpoon.setup()`.  This is required due to
 autocmds setup.
 
 ### Basic Setup
+
 Here is my basic setup
 
 ```lua
 local harpoon = require("harpoon")
 
--- REQUIRED
 harpoon:setup()
--- REQUIRED
 
-vim.keymap.set("n", "<leader>a", function() harpoon:list():add() end)
+vim.keymap.set("n", "<leader>a", function() harpoon.list():add() end)
 vim.keymap.set("n", "<C-e>", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end)
 
-vim.keymap.set("n", "<C-h>", function() harpoon:list():select(1) end)
-vim.keymap.set("n", "<C-t>", function() harpoon:list():select(2) end)
-vim.keymap.set("n", "<C-n>", function() harpoon:list():select(3) end)
-vim.keymap.set("n", "<C-s>", function() harpoon:list():select(4) end)
+vim.keymap.set("n", "<C-h>", function() harpoon.list():select(1) end)
+vim.keymap.set("n", "<C-t>", function() harpoon.list():select(2) end)
+vim.keymap.set("n", "<C-n>", function() harpoon.list():select(3) end)
+vim.keymap.set("n", "<C-s>", function() harpoon.list():select(4) end)
 
 -- Toggle previous & next buffers stored within Harpoon list
-vim.keymap.set("n", "<C-S-P>", function() harpoon:list():prev() end)
-vim.keymap.set("n", "<C-S-N>", function() harpoon:list():next() end)
+vim.keymap.set("n", "<C-S-P>", function() harpoon.list():prev() end)
+vim.keymap.set("n", "<C-S-N>", function() harpoon.list():next() end)
 ```
 
 ### Telescope
 
-In order to use [Telescope](https://github.com/nvim-telescope/telescope.nvim) as a UI,
-make sure to add `telescope` to your dependencies and paste this following snippet into your configuration.
+In order to use [Telescope](https://github.com/nvim-telescope/telescope.nvim)
+as a UI, make sure to add `telescope` to your dependencies and paste this
+following snippet into your configuration.
 
 ```lua
 local harpoon = require('harpoon')
-harpoon:setup({})
+harpoon.setup({})
 
 -- basic telescope configuration
 local conf = require("telescope.config").values
@@ -118,10 +124,11 @@ vim.keymap.set("n", "<C-e>", function() toggle_telescope(harpoon:list()) end,
     { desc = "Open harpoon window" })
 ```
 
-## ⇁ API
+## API
+
 You can define custom behavior of a harpoon list by providing your own calls.
 
-Here is a simple example where i create a list named `cmd` that takes the
+Here is a simple example where I create a list named `cmd` that takes the
 current line in the editor and adds it to harpoon menu.  When
 `list:select(...)` is called, we take the contents of the line and execute it
 as a vim command
@@ -172,18 +179,19 @@ harpoon:setup({
 
     }
 })
-
 ```
 
 ### Config
-There is quite a bit of behavior you can configure via `harpoon:setup()`
+
+There is quite a bit of behavior you can configure via `harpoon.setup()`
 
 * `settings`: is the global settings.  as of now there isn't a global setting in use, but once we have some custom behavior i'll put them here
 * `default`: the default configuration for any list.  it is simply a file harpoon
 * `[name] = HarpoonPartialConfigItem`: any named lists config.  it will be merged with `default` and override any behavior
 
 **HarpoonPartialConfigItem Definition**
-```
+
+```lua
 ---@class HarpoonPartialConfigItem
 ---@field select_with_nil? boolean defaults to false
 ---@field encode? (fun(list_item: HarpoonListItem): string) | boolean
@@ -198,6 +206,7 @@ There is quite a bit of behavior you can configure via `harpoon:setup()`
 ```
 
 **Detailed Definitions**
+
 * `select_with_nil`: allows for a list to call select even if the provided item is nil
 * `encode`: how to encode the list item to the harpoon file.  if encode is `false`, then the list will not be saved to disk (think terminals)
 * `decode`: how to decode the list
@@ -213,6 +222,7 @@ There is quite a bit of behavior you can configure via `harpoon:setup()`
 Settings can alter the experience of harpoon
 
 **Definition**
+
 ```lua
 ---@class HarpoonSettings
 ---@field save_on_toggle boolean defaults to false
@@ -222,11 +232,13 @@ Settings can alter the experience of harpoon
 ```
 
 **Descriptions**
+
 * `save_on_toggle`: any time the ui menu is closed then we will save the state back to the backing list, not to the fs
 * `sync_on_ui_close`: any time the ui menu is closed then the state of the list will be sync'd back to the fs
 * `key` how the out list key is looked up.  This can be useful when using worktrees and using git remote instead of file path
 
 **Defaults**
+
 ```lua
 settings = {
     save_on_toggle = false,
@@ -238,6 +250,7 @@ settings = {
 ```
 
 ### Extend
+
 The 'extend' functionality can be used to add keymaps for opening files in splits & tabs.
 
 ```lua
@@ -259,6 +272,7 @@ harpoon:extend({
 ```
 
 ### Builtin Extensions
+
 Highlight current file in the harpoon buffer list
 
 ```lua
@@ -267,9 +281,11 @@ harpoon:extend(harpoon_extensions.builtins.highlight_current_file())
 ```
 
 ### Highlight Groups
+
 TODO: Fill in the idea that we will emit out window information
 
 ### Logger
+
 This can help debug issues on other's computer.  To get your debug log please do the following.
 
 1. open up a new instance of vim
@@ -278,6 +294,7 @@ This can help debug issues on other's computer.  To get your debug log please do
 1. paste the buffer as part of the bug creation
 
 ## Extends
+
 THIS PART OF THE DOCS NEEDS FILLING OUT
 
 ```lua
@@ -289,7 +306,8 @@ harpoon:extend(extensions.builtins.command_on_nav("foo bar"));
 harpoon:extend(extensions.builtins.navigate_with_number());
 ```
 
-## ⇁ Contribution
+## Contribution
+
 This project is officially open source, not just public source.  If you wish to
 contribute start with an issue and I am totally willing for PRs, but I will be
 very conservative on what I take.  I don't want Harpoon _solving_ specific
@@ -298,13 +316,15 @@ issues, I want it to create the proper hooks to solve any problem
 **Running Tests**
 To run the tests make sure [plenary](https://github.com/nvim-lua/plenary.nvim) is checked out in the parent directory of *this* repository, then run `make test`.
 
-## ⇁ Social
+## Social
+
 For questions about Harpoon, there's a #harpoon channel on [the Primeagen's Discord](https://discord.gg/theprimeagen) server.
 * [Discord](https://discord.gg/theprimeagen)
 * [Twitch](https://www.twitch.tv/theprimeagen)
 * [Twitter](https://twitter.com/ThePrimeagen)
 
-## ⇁ Note to legacy Harpoon 1 users
+## Note to legacy Harpoon 1 users
+
 Original Harpoon will remain in a frozen state and i will merge PRs in with _no
 code review_ for those that wish to remain on that.  Harpoon 2 is significantly
 better and allows for MUCH greater control.  Please migrate to that (will

@@ -1,2 +1,1 @@
-local augroup = vim.api.nvim_create_augroup
-return augroup("Harpoon", {})
+return vim.api.nvim_create_augroup("Harpoon", {})
