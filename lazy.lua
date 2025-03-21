@@ -1,8 +1,8 @@
 return {
-	{ "nvim-lua/plenary.nvim", lazy = true },
-	{
-		"metalinspired/harpoon",
-		---@type HarpoonConfig
-		opts = {},
-	},
+  { "nvim-lua/plenary.nvim", lazy = true },
+  {
+    "metalinspired/harpoon",
+    ---@type HarpoonPartialConfig
+    opts = {},
+  },
 }
