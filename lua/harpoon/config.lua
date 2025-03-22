@@ -10,7 +10,7 @@ local Events = require("harpoon.events")
 ---@field select? fun(item: HarpoonListItem, options?: HarpoonListSelectOptions)
 ---@field encode? fun(object: HarpoonListItem): string
 ---@field decode? fun(value: string): HarpoonListItem
----@field create_list_item? fun(name?: string): HarpoonListItem
+---@field create_list_item? fun(): HarpoonListItem
 
 ---@class HarpoonConfig
 ---@field key string|fun(): string
@@ -21,7 +21,7 @@ local Events = require("harpoon.events")
 ---@field select fun(item: HarpoonListItem, options?: HarpoonListSelectOptions)
 ---@field encode fun(object: HarpoonListItem): string
 ---@field decode fun(value: string): HarpoonListItem
----@field create_list_item fun(name?: string): HarpoonListItem
+---@field create_list_item fun(): HarpoonListItem
 local M = {}
 
 ---@return HarpoonConfig
@@ -52,7 +52,12 @@ function M.defaults()
 
       options = options or {}
 
-      local bufnr = vim.fn.bufnr("^" .. item.value .. "$")
+      local path = item.value
+      if path:find("^[/~]") == nil then
+        path = vim.fn.fnamemodify(path, ":p")
+      end
+
+      local bufnr = vim.fn.bufnr(path)
       local set_position = false
 
       if bufnr == -1 then
