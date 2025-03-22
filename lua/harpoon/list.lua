@@ -12,10 +12,11 @@ local function real_length(list)
   return length
 end
 
----@class HarpoonListSelectOptions
----@field split boolean
----@field vsplit boolean
----@field tabedit boolean
+---@class HarpoonSelectOptions
+---@field split? boolean
+---@field vsplit? boolean
+---@field tabedit? boolean
+---@field create? boolean
 
 ---@class HarpoonCursorPosition
 ---@field row integer
@@ -261,7 +262,7 @@ function M:get_by_value(value)
 end
 
 ---@param index integer
----@param options? HarpoonListSelectOptions
+---@param options? HarpoonSelectOptions
 function M:select(index, options)
   local item = self.items[index]
 
@@ -279,10 +280,7 @@ function M:select(index, options)
   end
 
   self.index = index
-
-  vim.schedule(function()
-    self.config.select(item, options)
-  end)
+  self.config.select(self, item, options)
 end
 
 function M:next()

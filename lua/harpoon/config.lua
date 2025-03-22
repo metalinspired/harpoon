@@ -7,7 +7,9 @@ local Events = require("harpoon.events")
 ---@field reindex_on_remove? boolean
 ---@field nav_wrap? boolean
 ---@field equals? fun(a?: HarpoonListItem, b?: HarpoonListItem): boolean
----@field select? fun(item: HarpoonListItem, options?: HarpoonListSelectOptions)
+---@field select? fun(list: HarpoonList, item: HarpoonListItem, options?: HarpoonSelectOptions)
+---@field select_check? boolean
+---@field select_not_found? fun(list: HarpoonList, item: HarpoonListItem, options?: HarpoonSelectOptions)
 ---@field encode? fun(object: HarpoonListItem): string
 ---@field decode? fun(value: string): HarpoonListItem
 ---@field create_list_item? fun(): HarpoonListItem
@@ -15,10 +17,12 @@ local Events = require("harpoon.events")
 ---@class HarpoonConfig
 ---@field key string|fun(): string
 ---@field default_list string
----@field reindex_on_remove boolean Should list be reindexed if items are removed
+---@field reindex_on_remove boolean
 ---@field nav_wrap boolean
 ---@field equals fun(a?: HarpoonListItem, b?: HarpoonListItem): boolean Function used for comparing list items
----@field select fun(item: HarpoonListItem, options?: HarpoonListSelectOptions)
+---@field select fun(list: HarpoonList, item: HarpoonListItem, options?: HarpoonSelectOptions)
+---@field select_check boolean
+---@field select_not_found nil|fun(list: HarpoonList, item: HarpoonListItem, options?: HarpoonSelectOptions)
 ---@field encode fun(object: HarpoonListItem): string
 ---@field decode fun(value: string): HarpoonListItem
 ---@field create_list_item fun(): HarpoonListItem
@@ -45,7 +49,7 @@ function M.defaults()
 
       return a.value == b.value
     end,
-    select = function(item, options)
+    select = function(list, item, options)
       if item == nil then
         return
       end
@@ -61,6 +65,18 @@ function M.defaults()
       local set_position = false
 
       if bufnr == -1 then
+        if list.config.select_check and vim.uv.fs_stat(path) == nil then
+          if options.create ~= true then
+            if type(list.config.select_not_found) == "function" then
+              vim.schedule(function()
+                list.config.select_not_found(list, item, options)
+              end)
+            else
+              vim.print("error: " .. item.value .. " does not exist")
+            end
+            return
+          end
+        end
         set_position = true
         bufnr = vim.fn.bufadd(item.value)
       end
@@ -109,6 +125,7 @@ function M.defaults()
           vim.api.nvim_exec_autocmds("User", {
             pattern = Events.position_updated,
             data = {
+              list = list,
               item = item,
             },
           })
@@ -120,13 +137,14 @@ function M.defaults()
         data = { buffer = bufnr },
       })
     end,
+    select_check = true,
     encode = function(object)
       return vim.json.encode(object)
     end,
     decode = function(value)
       return vim.json.decode(value)
     end,
-    create_list_item = function(name)
+    create_list_item = function()
       local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":.")
       local bufnr = vim.fn.bufnr(name, false)
       local pos = { 1, 0 }
