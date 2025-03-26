@@ -26,6 +26,9 @@ local Events = require("harpoon.events")
 ---@field encode fun(object: HarpoonListItem): string
 ---@field decode fun(value: string): HarpoonListItem
 ---@field create_list_item fun(): HarpoonListItem
+
+---@class HarpoonConfigHelper
+---@field defaults fun(): HarpoonConfig
 local M = {}
 
 ---@return HarpoonConfig

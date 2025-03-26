@@ -1,7 +1,7 @@
 ---@type HarpoonEvents
 local Events = require("harpoon.events")
 
----@type HarpoonConfig
+---@type HarpoonConfigHelper
 local Config = require("harpoon.config")
 
 ---@type HarpoonList
