@@ -16,7 +16,6 @@ end
 ---@field split? boolean
 ---@field vsplit? boolean
 ---@field tabedit? boolean
----@field create? boolean
 
 ---@class HarpoonCursorPosition
 ---@field row integer
