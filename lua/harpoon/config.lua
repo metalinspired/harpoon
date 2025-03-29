@@ -8,8 +8,6 @@ local Events = require("harpoon.events")
 ---@field nav_wrap? boolean
 ---@field equals? fun(a?: HarpoonListItem, b?: HarpoonListItem): boolean
 ---@field select? fun(list: HarpoonList, item: HarpoonListItem, options?: HarpoonSelectOptions)
----@field select_check? boolean
----@field select_not_found? fun(list: HarpoonList, item: HarpoonListItem, options?: HarpoonSelectOptions)
 ---@field encode? fun(object: HarpoonListItem): string
 ---@field decode? fun(value: string): HarpoonListItem
 ---@field create_list_item? fun(): HarpoonListItem
@@ -21,8 +19,6 @@ local Events = require("harpoon.events")
 ---@field nav_wrap boolean
 ---@field equals fun(a?: HarpoonListItem, b?: HarpoonListItem): boolean Function used for comparing list items
 ---@field select fun(list: HarpoonList, item: HarpoonListItem, options?: HarpoonSelectOptions)
----@field select_check boolean
----@field select_not_found nil|fun(list: HarpoonList, item: HarpoonListItem, options?: HarpoonSelectOptions)
 ---@field encode fun(object: HarpoonListItem): string
 ---@field decode fun(value: string): HarpoonListItem
 ---@field create_list_item fun(): HarpoonListItem
@@ -67,78 +63,102 @@ function M.defaults()
       local bufnr = vim.fn.bufnr(path)
       local set_position = false
 
-      if bufnr == -1 then
-        if list.config.select_check and vim.uv.fs_stat(path) == nil then
-          if options.create ~= true then
-            if type(list.config.select_not_found) == "function" then
-              vim.schedule(function()
-                list.config.select_not_found(list, item, options)
-              end)
-            else
-              vim.print("error: " .. item.value .. " does not exist")
-            end
-            return
-          end
-        end
-        set_position = true
-        bufnr = vim.fn.bufadd(item.value)
-      end
-
-      if not vim.api.nvim_buf_is_loaded(bufnr) then
-        vim.fn.bufload(bufnr)
-        vim.api.nvim_set_option_value("buflisted", true, {
-          buf = bufnr,
-        })
-      end
-
-      if options.vsplit then
-        vim.cmd("vsplit")
-      elseif options.split then
-        vim.cmd("split")
-      elseif options.tabedit then
-        vim.cmd("tabedit")
-      end
-
-      vim.api.nvim_set_current_buf(bufnr)
-
-      if set_position then
-        local lines = vim.api.nvim_buf_line_count(bufnr)
-
-        local edited = false
-        if item.context.row > lines then
-          item.context.row = lines
-          edited = true
-        end
-
-        local row = item.context.row
-        local row_text = vim.api.nvim_buf_get_lines(0, row - 1, row, false)
-        local col = #row_text[1]
-
-        if item.context.col > col then
-          item.context.col = col
-          edited = true
-        end
-
-        vim.api.nvim_win_set_cursor(0, {
-          item.context.row or 1,
-          item.context.col or 0,
-        })
-
-        if edited then
-          vim.api.nvim_exec_autocmds("User", {
-            pattern = Events.position_updated,
-            data = {
-              list = list,
-              item = item,
-            },
+      local function open()
+        if not vim.api.nvim_buf_is_loaded(bufnr) then
+          vim.fn.bufload(bufnr)
+          vim.api.nvim_set_option_value("buflisted", true, {
+            buf = bufnr,
           })
         end
+
+        if options.vsplit then
+          vim.cmd("vsplit")
+        elseif options.split then
+          vim.cmd("split")
+        elseif options.tabedit then
+          vim.cmd("tabedit")
+        end
+
+        vim.api.nvim_set_current_buf(bufnr)
+
+        if set_position then
+          local lines = vim.api.nvim_buf_line_count(bufnr)
+
+          local edited = false
+          if item.context.row > lines then
+            item.context.row = lines
+            edited = true
+          end
+
+          local row = item.context.row
+          local row_text = vim.api.nvim_buf_get_lines(0, row - 1, row, false)
+          local col = #row_text[1]
+
+          if item.context.col > col then
+            item.context.col = col
+            edited = true
+          end
+
+          vim.api.nvim_win_set_cursor(0, {
+            item.context.row or 1,
+            item.context.col or 0,
+          })
+
+          if edited then
+            vim.api.nvim_exec_autocmds("User", {
+              pattern = Events.position_updated,
+              data = {
+                list = list,
+                item = item,
+              },
+            })
+          end
+        end
+
+        vim.api.nvim_exec_autocmds("User", {
+          pattern = Events.navigate,
+          data = { buffer = bufnr },
+        })
       end
 
-      vim.api.nvim_exec_autocmds("User", {
-        pattern = Events.navigate,
-        data = { buffer = bufnr },
-      })
+      local function add_and_open()
+        bufnr = vim.fn.bufadd(item.value)
+        open()
+      end
+
+      if bufnr == -1 then
+        if vim.uv.fs_stat(path) == nil then
+          -- Just show error message if path is absolute or relative to home directory
+          if item.value:find("^[/~]") ~= nil then
+            vim.print("error: " .. item.value .. " does not exist")
+            return
+          end
+
+          vim.ui.select({ "remove", "open" }, {
+            prompt = "File does not exist",
+            format_item = function(choice)
+              if choice == "remove" then
+                return "Remove file from list"
+              end
+
+              return "Open as empty buffer"
+            end,
+          }, function(choice)
+            if choice == "remove" then
+              list:remove(item)
+            elseif choice == "open" then
+              add_and_open()
+            end
+          end)
+
+          return
+        end
+
+        add_and_open()
+        return
+      end
+
+      open()
     end,
     select_check = true,
     encode = function(object)
