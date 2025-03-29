@@ -38,8 +38,8 @@ function M.setup(config)
         M.lists = {}
       end
 
-      M.for_each_list(function(list, config)
-        local fn = config[ev.event]
+      M.for_each_list(function(list, cfg)
+        local fn = cfg[ev.event]
         if fn ~= nil then
           fn(ev, list)
         end
