@@ -56,6 +56,9 @@ end
 ---@return boolean
 function M.list_loaded(name)
   name = name or M.config.default_list
+  if M.lists[M.config.key()] == nil then
+    return false
+  end
   return M.lists[M.config.key()][name] ~= nil
 end
 
