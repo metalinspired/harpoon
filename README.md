@@ -42,45 +42,60 @@ tmux windows, or dream up your own custom action and execute with a single key
 
 * neovim 0.8.0+ required
 
-### install using [packer.nvim](https://github.com/wbthomason/packer.nvim)
-
-```lua
-use "nvim-lua/plenary.nvim"
-use {
-    "ThePrimeagen/harpoon",
-    branch = "harpoon2",
-    requires = { {"nvim-lua/plenary.nvim"} }
-}
-```
-
 ### install using [lazy.nvim](https://github.com/folke/lazy.nvim)
 
 ```lua
 {
-    "ThePrimeagen/harpoon",
-    branch = "harpoon2",
-    dependencies = { "nvim-lua/plenary.nvim" }
+  "metalinspired/harpoon",
+  branch = "harpoon2",
+  dependencies = { "nvim-lua/plenary.nvim" },
+  opts = {
+    -- optional configuration
+    -- check the configuration options below
+  }
 }
 ```
 
+For other package managers you're on your own :)
+Do not forget to call `Harpoon.setup()`.
+
 ## Getting Started
 
-### harpoon.setup() is required
+### Configuration
 
-It is a requirement to call `harpoon.setup()`.  This is required due to
-autocmds setup.
+```lua
+---@class HarpoonPartialConfig
+---@field key? string|fun(): string
+---@field default_list? string
+---@field reindex_on_remove? boolean
+---@field nav_wrap? boolean
+---@field equals? fun(a?: HarpoonListItem, b?: HarpoonListItem): boolean
+---@field select? fun(list: HarpoonList, item: HarpoonListItem, options?: HarpoonSelectOptions)
+---@field select_check? boolean
+---@field select_not_found? fun(list: HarpoonList, item: HarpoonListItem, options?: HarpoonSelectOptions)
+---@field encode? fun(object: HarpoonListItem): string
+---@field decode? fun(value: string): HarpoonListItem
+---@field create_item? fun(): HarpoonListItem
+```
+
+* `key`: 
+* `default_list`: name of default list.
+* `reindex_on_remove`: should list be reindexed if elements are removed. Otherwise, remaining items will keep their index.
+* `nav_wrap`: start over from start/end when last/first element is reached when using next/previous.
+* `equals`: how to compare two list items for equality.
+* `select`: the action taken when selecting a list item. called from `list:select(idx, options)`.
+* `select_check`: check if file exists before loading it into buffer.
+* `select_not_found`: action to take if file does not exist.
+* `encode`: how to encode the list item to the harpoon file.
+* `decode`: how to decode the list
+* `create_item`: called when `list:add()` or `list:prepend()` is called.
 
 ### Basic Setup
-
-Here is my basic setup
 
 ```lua
 local harpoon = require("harpoon")
 
-harpoon:setup()
-
 vim.keymap.set("n", "<leader>a", function() harpoon.list():add() end)
-vim.keymap.set("n", "<C-e>", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end)
 
 vim.keymap.set("n", "<C-h>", function() harpoon.list():select(1) end)
 vim.keymap.set("n", "<C-t>", function() harpoon.list():select(2) end)
@@ -100,7 +115,6 @@ following snippet into your configuration.
 
 ```lua
 local harpoon = require('harpoon')
-harpoon.setup({})
 
 -- basic telescope configuration
 local conf = require("telescope.config").values
@@ -176,7 +190,6 @@ harpoon:setup({
             -- WOAH, IS THIS HTMX LEVEL XSS ATTACK??
             vim.cmd(list_item.value)
         end
-
     }
 })
 ```
@@ -199,7 +212,7 @@ There is quite a bit of behavior you can configure via `harpoon.setup()`
 ---@field display? (fun(list_item: HarpoonListItem): string)
 ---@field select? (fun(list_item?: HarpoonListItem, list: HarpoonList, options: any?): nil)
 ---@field equals? (fun(list_line_a: HarpoonListItem, list_line_b: HarpoonListItem): boolean)
----@field create_list_item? fun(config: HarpoonPartialConfigItem, item: any?): HarpoonListItem
+---@field create_item? fun(config: HarpoonPartialConfigItem, item: any?): HarpoonListItem
 ---@field BufLeave? fun(evt: any, list: HarpoonList): nil
 ---@field VimLeavePre? fun(evt: any, list: HarpoonList): nil
 ---@field get_root_dir? fun(): string
@@ -213,7 +226,7 @@ There is quite a bit of behavior you can configure via `harpoon.setup()`
 * `display`: how to display the list item in the ui menu
 * `select`: the action taken when selecting a list item. called from `list:select(idx, options)`
 * `equals`: how to compare two list items for equality
-* `create_list_item`: called when `list:add()` or `list:prepend()` is called.  called with an item, which will be a string, when adding through the ui menu
+* `create_item`: called when `list:add()` or `list:prepend()` is called.  called with an item, which will be a string, when adding through the ui menu
 * `BufLeave`: this function is called for every list on BufLeave.  if you need custom behavior, this is the place
 * `VimLeavePre`: this function is called for every list on VimLeavePre.
 * `get_root_dir`: used for creating relative paths.  defaults to `vim.uv.cwd()`
@@ -315,17 +328,3 @@ issues, I want it to create the proper hooks to solve any problem
 
 **Running Tests**
 To run the tests make sure [plenary](https://github.com/nvim-lua/plenary.nvim) is checked out in the parent directory of *this* repository, then run `make test`.
-
-## Social
-
-For questions about Harpoon, there's a #harpoon channel on [the Primeagen's Discord](https://discord.gg/theprimeagen) server.
-* [Discord](https://discord.gg/theprimeagen)
-* [Twitch](https://www.twitch.tv/theprimeagen)
-* [Twitter](https://twitter.com/ThePrimeagen)
-
-## Note to legacy Harpoon 1 users
-
-Original Harpoon will remain in a frozen state and i will merge PRs in with _no
-code review_ for those that wish to remain on that.  Harpoon 2 is significantly
-better and allows for MUCH greater control.  Please migrate to that (will
-become `master` within the next few months).
